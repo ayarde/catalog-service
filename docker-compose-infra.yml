@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Base de Datos de Catálogo (Lectura)
+  mongodb:
+    image: mongo:7.0
+    container_name: catalog-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: catalog_db
+    volumes:
+      - mongodb_data:/data/db
+
+  # Caché Distribuido (Redis) para lecturas rápidas
+  redis:
+    image: redis:7.2-alpine
+    container_name: catalog-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+
+  # Mensajería Asíncrona (RabbitMQ)
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: ecommerce-rabbitmq
+    ports:
+      - "5672:5672"   # AMQP Protocol
+      - "15672:15672" # Management Console
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Trazabilidad Distribuida (Zipkin)
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: ecommerce-zipkin
+    ports:
+      - "9411:9411"
+
+volumes:
+  mongodb_data:
+  redis_data:

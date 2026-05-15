@@ -351,31 +351,6 @@ private void assertRecordExists(String correlationId) {
 - **Dependencias**: Conectar con servicios reales (BigQuery, Pub/Sub)
 - **Ejemplo**: `MultimediaTraceRepositoryImplIntTest`
 
----
-
-## 🔧 Configuración de Tests
-
-### **Integration Tests - Credenciales reales:**
-```java
-public class MultimediaTraceRepositoryImplIntTest {
-    
-    @Before
-    public void setUp() throws IOException {
-        // Usar credenciales explícitas para el test
-        String credentialsPath = "src/intTest/resources/keys-snd-PubSub-IntTest.json";
-        ServiceAccountCredentials credentials = ServiceAccountCredentials
-            .fromStream(new FileInputStream(credentialsPath));
-        
-        BigQuery bigQuery = BigQueryOptions.newBuilder()
-            .setProjectId(PROJECT_ID)
-            .setCredentials(credentials)
-            .build()
-            .getService();
-        
-        repository = new MultimediaTraceRepositoryImpl(PROJECT_ID, DATASET_ID, bigQuery);
-    }
-}
-```
 
 ---
 
@@ -396,43 +371,6 @@ public class MultimediaTraceRepositoryImplIntTest {
 2. **Separación con Underscores:**
    > **"Separate words with underscores. Doing so helps improve readability, especially in long names."**
 
-#### **🔄 Aplicación en Nuestro Proyecto:**
-
-Estos consejos **COMPLEMENTAN** nuestras reglas existentes:
-
-- **✅ Mantener**: Formato `methodUnderTestingName_StateUnderTest`
-- **✅ Agregar**: Libertad para descripciones más naturales cuando sea necesario
-- **✅ Mejorar**: Usar underscores para separar palabras en nombres largos
-
-#### **📖 Ejemplo de Aplicación:**
-
-```java
-/**
-En esta prueba se valida que cuando un usuario intenta procesar una imagen multimedia
-que ya ha sido procesada anteriormente, el sistema debe detectar la duplicación
-y actualizar el contador de intentos sin crear un nuevo registro.
-
-Características extras:
-- La imagen ya existe en el sistema
-- Se intenta procesar nuevamente
-
-Se espera que el método:
-- Detecte la duplicación automáticamente
-- Actualice el contador de intentos
-- No cree un nuevo registro
-**/
-@Test
-public void processMultimediaImage_AlreadyProcessedImage_UpdatesAttemptCounter() {
-    //given
-    // Configuración del escenario de duplicación
-    
-    //when
-    // Intento de procesar imagen duplicada
-    
-    //then
-    // Validación de actualización de contador
-}
-```
 
 ---
 
@@ -463,14 +401,14 @@ public void processMultimediaImage_AlreadyProcessedImage_UpdatesAttemptCounter()
 
 ### **Unit Tests:**
 ```bash
-./gradlew :opennavent-realestate-wnats:test
+./gradlew :boot:bootRun:test
 ```
 
 ### **Integration Tests:**
 **⚠️ IMPORTANTE**: Los integration tests **SIEMPRE** deben ejecutarse con el flag `-DdoIntegrationTest=true`. Sin este flag, los integration tests no se ejecutarán.
 
 ```bash
-./gradlew :opennavent-realestate-wnats:integrationTest -DdoIntegrationTest=true
+./gradlew :boot:bootRun:integrationTest -DdoIntegrationTest=true
 ```
 
 **Regla obligatoria:**
@@ -480,7 +418,7 @@ public void processMultimediaImage_AlreadyProcessedImage_UpdatesAttemptCounter()
 
 ### **Todos los tests:**
 ```bash
-./gradlew :opennavent-realestate-wnats:test intTest -DdoIntegrationTest=true
+./gradlew :boot:bootRun:test intTest -DdoIntegrationTest=true
 ```
 
 ---
@@ -491,13 +429,9 @@ public void processMultimediaImage_AlreadyProcessedImage_UpdatesAttemptCounter()
 - **Khorikov, V., 2020. Unit Testing Principles, Practices, and Patterns. New York: Manning Publications Co. LLC.**
 
 ### **Recursos Adicionales:**
-- **JUnit 4**: Framework de testing
+- **JUnit 5**: Framework de testing
 - **Mockito**: Para mocks (cuando esté disponible)
-- **BigQuery**: Para integration tests
-- **Google Cloud**: Credenciales para servicios externos
 - **7 Popular Unit Test Naming Conventions and Best Practices**: https://methodpoet.com/unit-test-method-naming-convention/
 - **Making Better Unit Tests**: https://freecontent.manning.com/making-better-unit-tests/
 
 ---
-
-*Última actualización: Agosto 2025* 

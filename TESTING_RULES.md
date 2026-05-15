@@ -2,7 +2,7 @@
 
 ## 📋 Resumen Ejecutivo
 
-Este documento establece las reglas y mejores prácticas para la creación y mantenimiento de **unit tests** e **integration tests** en el proyecto `opennavent-realestate-cross`.
+Este documento establece las reglas y mejores prácticas para la creación y mantenimiento de **unit tests** e **integration tests** en el proyecto.
 
 ---
 

@@ -355,31 +355,6 @@ private void assertRecordExists(String correlationId) {
 
 ## 🔧 Configuración de Tests
 
-### **Unit Tests - Stub Pattern:**
-```java
-public class MultimediaTraceRepositoryImplTest {
-    
-    private TestMultimediaTraceRepository testRepository;
-    
-    @Before
-    public void setUp() {
-        testRepository = new TestMultimediaTraceRepository();
-        service = new MultimediaTraceServiceImpl(testRepository);
-    }
-    
-    //<editor-fold desc="Stub implementation">
-    private static class TestMultimediaTraceRepository implements MultimediaTraceRepository {
-        public boolean mergeCalled = false;
-        
-        @Override
-        public void mergeMultimediaTraceRecord(MultimediaTraceRecord record) {
-            mergeCalled = true;
-        }
-    }
-    //</editor-fold>
-}
-```
-
 ### **Integration Tests - Credenciales reales:**
 ```java
 public class MultimediaTraceRepositoryImplIntTest {

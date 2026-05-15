@@ -4,6 +4,11 @@ plugins {
     id 'java'
 }
 
+// Validación de versión de Java para evitar fallos de ejecución (Alineado con Toolchain)
+if (JavaVersion.current() < JavaVersion.VERSION_25) {
+    throw new GradleException("Este proyecto está diseñado para Java 25. Por favor, asegúrate de que Gradle esté usando JDK 25. Versión actual: ${JavaVersion.current()}")
+}
+
 allprojects {
     group = project.group
     version = project.version

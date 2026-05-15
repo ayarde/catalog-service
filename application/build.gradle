@@ -1,0 +1,54 @@
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
+
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management'
+}
+
+sourceSets {
+    intTest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+        java.srcDir 'src/intTest/java'
+        resources.srcDir 'src/intTest/resources'
+    }
+}
+
+configurations {
+    intTestImplementation.extendsFrom testImplementation
+    intTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+dependencies {
+    implementation project(':domain')
+
+    implementation platform(SpringBootPlugin.BOM_COORDINATES)
+
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework:spring-tx'
+    
+    implementation "io.hypersistence:hypersistence-tsid:${tsidVersion}"
+
+    // Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.register('intTest', Test) {
+    description = 'Runs integration tests.'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.intTest.output.classesDirs
+    classpath = sourceSets.intTest.runtimeClasspath
+    
+    useJUnitPlatform()
+
+    // Solo se ejecutan si se pasa el flag -DdoIntegrationTest=true según TESTING_RULES.md
+    onlyIf {
+        System.getProperty('doIntegrationTest') == 'true'
+    }
+}
+
+test {
+    useJUnitPlatform()
+}

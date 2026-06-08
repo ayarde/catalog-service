@@ -1,0 +1,8 @@
+spring:
+  data:
+    mongodb:
+      database: catalog_inttest_db
+logging:
+  level:
+    org.springframework.data.mongodb: WARN
+    org.springframework.amqp: WARN

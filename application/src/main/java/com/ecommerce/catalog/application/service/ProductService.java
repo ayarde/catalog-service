@@ -5,6 +5,7 @@ import com.ecommerce.catalog.application.port.in.*;
 import com.ecommerce.catalog.domain.event.ProductCreatedEvent;
 import com.ecommerce.catalog.domain.exception.AlreadyExistsException;
 import com.ecommerce.catalog.domain.exception.NotFoundException;
+import com.ecommerce.catalog.domain.model.PagedResult;
 import com.ecommerce.catalog.domain.model.Product;
 import com.ecommerce.catalog.domain.model.ProductImage;
 import com.ecommerce.catalog.domain.model.ProductStatus;
@@ -163,9 +164,9 @@ public class ProductService implements
     }
 
     @Override
-    @Cacheable(value = "products_list")
-    public List<Product> listAll() {
-        return repository.findAll();
+    @Cacheable(value = "products_list", key = "{#page, #size}")
+    public PagedResult<Product> list(int page, int size) {
+        return repository.findAll(page, size);
     }
 
     @Override

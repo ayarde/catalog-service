@@ -272,25 +272,29 @@ public class ProductServiceTest {
     }
 
     /**
-    En esta prueba se valida la obtención de todos los productos del catálogo.
+    En esta prueba se valida la obtención paginada de los productos del catálogo.
     
     Características extras:
     - Existen productos registrados
     
     Se espera que el método:
-    - Retorne la lista completa de productos
+    - Retorne el resultado paginado con la información de los productos.
     **/
     @Test
-    public void listAll_ExistingProducts_ReturnsCompleteList() {
+    public void list_ExistingProducts_ReturnsPagedResult() {
         //given
-        when(repository.findAll()).thenReturn(List.of(testProduct));
+        com.ecommerce.catalog.domain.model.PagedResult<Product> pagedResult = new com.ecommerce.catalog.domain.model.PagedResult<>(
+                List.of(testProduct), 0, 20, 1L, 1
+        );
+        when(repository.findAll(0, 20)).thenReturn(pagedResult);
         
         //when
-        List<Product> result = productService.listAll();
+        com.ecommerce.catalog.domain.model.PagedResult<Product> result = productService.list(0, 20);
         
         //then
-        assertThat(result).as("La lista no debe estar vacía").isNotEmpty();
-        verify(repository).findAll();
+        assertThat(result.content()).as("La lista no debe estar vacía").isNotEmpty();
+        assertThat(result.totalElements()).isEqualTo(1L);
+        verify(repository).findAll(0, 20);
     }
 
     /**

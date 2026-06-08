@@ -35,20 +35,17 @@ dependencies {
 }
 
 tasks.register('intTest', Test) {
-    description = 'Runs integration tests.'
+    description = 'Ejecuta integration tests. Requiere -DdoIntegrationTest=true'
     group = 'verification'
 
     testClassesDirs = sourceSets.intTest.output.classesDirs
     classpath = sourceSets.intTest.runtimeClasspath
-    
-    useJUnitPlatform()
 
-    // Solo se ejecutan si se pasa el flag -DdoIntegrationTest=true según TESTING_RULES.md
-    onlyIf {
-        System.getProperty('doIntegrationTest') == 'true'
-    }
+    useJUnitPlatform()
 }
 
-test {
-    useJUnitPlatform()
+tasks.named('check') {
+    if (project.hasProperty('doIntegrationTest') && project.doIntegrationTest.toBoolean()) {
+        dependsOn intTest
+    }
 }

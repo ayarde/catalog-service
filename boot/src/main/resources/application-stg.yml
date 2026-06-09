@@ -1,0 +1,10 @@
+# Perfil de Staging (Pre-Producción)
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/catalog_stg # Base de datos separada para QA
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # En Staging capturamos todo para poder analizar las pruebas de integración

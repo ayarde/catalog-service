@@ -1,0 +1,5 @@
+# Perfil de Desarrollo Local
+management:
+  tracing:
+    sampling:
+      probability: 1.0 # 100% trazabilidad para debugging

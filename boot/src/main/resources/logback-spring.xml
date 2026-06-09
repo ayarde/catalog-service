@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Nombre de la aplicación para identificarla en los logs -->
+    <springProperty scope="context" name="applicationName" source="spring.application.name"/>
+
+    <!-- 1. APPENDER PARA CONSOLA (Desarrollo - Texto Plano con Color) -->
+    <appender name="CONSOLE_COLOR" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr([%X{traceId:-},%X{spanId:-}]){cyan} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 2. APPENDER PARA JSON (Staging/Producción - Estructurado) -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <timeZone>UTC</timeZone>
+                </timestamp>
+                <version/>
+                <logLevel/>
+                <message/>
+                <loggerName/>
+                <threadName/>
+                <contextName/>
+                <stackTrace/>
+                <mdc/> <!-- Aquí se incluyen automáticamente traceId y spanId -->
+                <arguments/>
+                <pattern>
+                    <pattern>
+                        {
+                        "service": "${applicationName}"
+                        }
+                    </pattern>
+                </pattern>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!-- 3. CONFIGURACIÓN GLOBAL (Default) -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE_COLOR"/>
+    </root>
+
+    <!-- 4. CONFIGURACIÓN POR AMBIENTES (Profiles) -->
+    
+    <!-- Perfil DEV: Logs legibles para humanos y nivel DEBUG -->
+    <springProfile name="dev">
+        <logger name="com.ecommerce.catalog" level="DEBUG"/>
+        <logger name="org.springframework.data.mongodb.core.MongoTemplate" level="DEBUG"/>
+    </springProfile>
+
+    <!-- Perfil STG: Combinación de visibilidad y estructura -->
+    <springProfile name="stg">
+        <logger name="com.ecommerce.catalog" level="INFO"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE_COLOR"/>
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- Perfil PROD: Optimización total y salida JSON pura -->
+    <springProfile name="prod">
+        <logger name="com.ecommerce.catalog" level="INFO"/>
+        <logger name="org.springframework.data.mongodb" level="WARN"/>
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

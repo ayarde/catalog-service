@@ -1,0 +1,103 @@
+spring:
+  application:
+    name: catalog-service
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  
+  # Configuración de MongoDB y Redis
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://localhost:27017/catalog_db}
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+
+  # Configuración de RabbitMQ (AMQP)
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+  # Habilitar Virtual Threads (Java 21/25)
+  threads:
+    virtual:
+      enabled: true
+
+  profiles:
+    active: dev
+
+server:
+  port: 8081
+  shutdown: graceful
+
+# Actuator & Observabilidad
+management:
+  endpoints:
+    web:
+      base-path: /management
+      exposure:
+        include: "health,info,prometheus,metrics"
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+      probes:
+        enabled: true
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+  info:
+    build:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0 # 100% de trazas en desarrollo (recomendado)
+
+# Logging Config
+logging:
+  config: classpath:logback-spring.xml
+
+# Configuración de Resiliencia (Resilience4j)
+resilience4j:
+  circuitbreaker:
+    instances:
+      productService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+
+  bulkhead:
+    instances:
+      productService:
+        maxConcurrentCalls: 25
+        maxWaitDuration: 500ms
+
+  ratelimiter:
+    instances:
+      catalogList:
+        limitForPeriod: 50
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+      productDetail:
+        limitForPeriod: 20
+        limitRefreshPeriod: 1s
+        timeoutDuration: 500ms
+
+  retry:
+    instances:
+      messaging:
+        maxAttempts: 3
+        waitDuration: 2s
+        retryExceptions:
+          - org.springframework.amqp.AmqpException
+
+

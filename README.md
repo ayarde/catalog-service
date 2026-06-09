@@ -30,23 +30,47 @@ docker-compose -f docker-compose-infra.yml up -d
 Por defecto, la aplicación toma las credenciales locales estándar que genera Docker Compose (ver `application.yml` para referencias directas).
 
 ### 3. Compilar y Arrancar
-Como es un proyecto multi-módulo en Gradle, arrancaremos desde el módulo `:boot` que ensambla todas las capas.
+
+#### Desarrollo local (hot reload)
+```bash
+# Iniciar con perfil dev (datos de prueba automáticos)
+./gradlew :boot:bootRun
+```
+
+El perfil `dev` se activa automáticamente, lo que ejecuta el `DataSeeder` al iniciar. Si la base de datos está vacía, se insertan 3 productos de ejemplo con variantes, imágenes y atributos realistas (ver [Datos de prueba](#datos-de-prueba)).
+
+#### Build completo (producción/staging)
 ```bash
 # Compilar el proyecto entero y correr los tests
 ./gradlew build jacocoTestReport
 
 # Abrir el reporte HTML (unit tests) del módulo 'application'
 open file:///Users/adrian/Develop/catalog-service/application/build/reports/jacoco/test/html/index.html
+
+# Ejecutar en producción (sin datos de prueba)
+java -jar boot/build/libs/catalog-service-*.jar --spring.profiles.active=prod
 ```
 
 > **Nota:** Actualmente los reportes de JaCoCo están desactivados debido a incompatibilidades con Java 25. Para habilitarlos, cambie la toolchain a Java 21 (o una versión compatible) y elimine la línea que desactiva `jacoco.enabled` en `build.gradle`.
 
-> El servicio se ejecutará de forma predeterminada en el puerto `8080`.
+### 4. Datos de prueba
+
+Al usar `./gradlew :boot:bootRun` (perfil `dev`), el `DataSeeder` inserta automáticamente 3 productos en estado `ACTIVE`:
+
+| Producto | Variantes | Rango de precios |
+|---|---|---|
+| iPhone 16 Pro Max | 5 (colores / almacenamiento) | $1,799 – $2,299 |
+| MacBook Pro 16" M4 Max | 4 (RAM / SSD) | $3,499 – $4,999 |
+| Sony WH-1000XM6 | 3 (colores) | $449 |
+
+Cada producto incluye variantes con stock diferenciado, imágenes, atributos técnicos, categorías y tags.
+
+> El seeder solo se ejecuta si la base de datos está vacía (`findAll().totalElements() == 0`). Si ya hay productos, los salta sin duplicar.
 
 ## 📚 Documentación Interactiva de API (Swagger)
 Una vez que el servidor Spring Boot esté corriendo, puedes explorar, leer y probar todos los endpoints disponibles a través de **Swagger UI**:
 
-🌐 **[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)**
+🌐 **[http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)**
 
 ---
 ## 🧪 Tests
@@ -117,6 +141,16 @@ Los `intTest` muestran salida detallada: `ClassName STANDARD_OUT` con logs de Te
 > La tarea `intTest` exporta `DOCKER_API_VERSION=1.44` como respaldo para Docker Engine 29+.
 
 **CI / troubleshooting:** si Testcontainers no detecta el daemon, verifica `DOCKER_HOST`. En macOS suele ser el socket de Docker Desktop.
+
+---
+## 📋 Changelog de cambios recientes
+
+### [2026-06-08] — DataSeeder, corrección de caché Redis y mejoras en logs
+- **DataSeeder:** Nuevo `DataSeeder` activo con perfil `dev` que inserta 3 productos realistas al iniciar la app.
+- **Perfil `dev` por defecto:** `spring.profiles.active: dev` configurado en `application.yml`. `./gradlew :boot:bootRun` ya levanta con datos de prueba.
+- **Corrección serialización Redis:** Cambio de `DefaultTyping.NON_FINAL` a `DefaultTyping.EVERYTHING` en `RedisCacheConfig` para que Jackson incluya `@class` en records de Java. Soluciona `SerializationException` al leer la caché de `products_list`.
+- **Mejora en logs de fallback:** El método `listProductsFallback` ahora loguea la excepción real (`Fallback triggered ... due to {}: {}`) en lugar del mensaje genérico "Rate Limit exceeded".
+- **Puerto Swagger corregido:** Documentación apunta a `8081` (era `8080`).
 
 ---
 *Este servicio está preparado para Integración Continua (CI), contando con centralización de variables en Gradle, Toolchains de Java 25 y Reportes de Cobertura JaCoCo (mínimo 80% en unit tests del módulo infrastructure).*

@@ -158,7 +158,7 @@ public class ProductController {
     }
 
     public PagedResponse<ProductResponse> listProductsFallback(int page, int size, Throwable t) {
-        log.warn("Rate Limit exceeded for listProducts. Returning empty page as fallback. Error: {}", t.getMessage());
+        log.warn("Fallback triggered for listProducts(page={}, size={}) due to {}: {}", page, size, t.getClass().getSimpleName(), t.getMessage());
         return new PagedResponse<>(List.of(), page, size, 0L, 0, true);
     }
 

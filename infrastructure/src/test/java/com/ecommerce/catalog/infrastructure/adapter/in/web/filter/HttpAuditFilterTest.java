@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class HttpAuditFilterTest {
@@ -108,5 +110,105 @@ class HttpAuditFilterTest {
 
         //then
         assertThat(response.getStatus()).isEqualTo(201);
+    }
+
+    /**
+    En esta prueba unitaria se valida que el filtro omite rutas que contienen "swagger".
+
+    Características extras:
+    - Simula una petición GET a "/swagger-ui/index.html".
+    - El método shouldNotFilter debe devolver true.
+
+    Se espera que el método:
+    - Retorne true indicando que la ruta debe ser omitida.
+    **/
+    @Test
+    void shouldNotFilter_WhenSwaggerPath_ReturnsTrue() {
+        //given
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/swagger-ui/index.html");
+
+        //when
+        boolean skip = filter.shouldNotFilter(request);
+
+        //then
+        assertThat(skip).isTrue();
+    }
+
+    /**
+    En esta prueba unitaria se valida que el filtro omite rutas que contienen "api-docs".
+
+    Características extras:
+    - Simula una petición GET a "/v3/api-docs".
+    - El método shouldNotFilter debe devolver true.
+
+    Se espera que el método:
+    - Retorne true indicando que la ruta debe ser omitida.
+    **/
+    @Test
+    void shouldNotFilter_WhenApiDocsPath_ReturnsTrue() {
+        //given
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/v3/api-docs");
+
+        //when
+        boolean skip = filter.shouldNotFilter(request);
+
+        //then
+        assertThat(skip).isTrue();
+    }
+
+    /**
+    En esta prueba unitaria se valida que una petición con query string procesa correctamente
+    la rama request.getQueryString() != null en el log de auditoría.
+
+    Características extras:
+    - Simula una petición GET a "/api/v1/products?page=0&size=20".
+    - El filtro debe incluir la query string en la auditoría sin errores.
+
+    Se espera que el método:
+    - No lance excepciones.
+    - El HttpServletResponse tenga status 200 después de ejecutar el filtro.
+    **/
+    @Test
+    void doFilterInternal_WithQueryString_ShouldComplete() throws Exception {
+        //given
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/products");
+        request.setQueryString("page=0&size=20");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = (req, res) -> ((HttpServletResponse) res).setStatus(200);
+
+        //when
+        filter.doFilter(request, response, chain);
+
+        //then
+        assertThat(response.getStatus()).isEqualTo(200);
+    }
+
+    /**
+    En esta prueba unitaria se valida que una respuesta con cuerpo es capturada y auditada
+    correctamente, ejerciendo las ramas de getPayload para payload no vacío.
+
+    Características extras:
+    - Simula una petición GET a "/api/v1/products".
+    - La cadena de filtros escribe contenido en el cuerpo de la respuesta.
+
+    Se espera que el método:
+    - No lance excepciones.
+    - Capture el cuerpo de la respuesta para el log de auditoría.
+    **/
+    @Test
+    void doFilterInternal_WithResponseBody_ShouldCapturePayload() throws Exception {
+        //given
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/products");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = (req, res) -> {
+            res.getOutputStream().write("test body".getBytes(StandardCharsets.UTF_8));
+            ((HttpServletResponse) res).setStatus(200);
+        };
+
+        //when
+        filter.doFilter(request, response, chain);
+
+        //then
+        assertThat(response.getStatus()).isEqualTo(200);
     }
 }

@@ -6,6 +6,8 @@ import com.ecommerce.catalog.infrastructure.adapter.in.web.dto.ErrorResponse;
 import com.ecommerce.catalog.infrastructure.adapter.in.web.dto.ValidationErrorResponse;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.TraceContext;
 import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +35,12 @@ class GlobalExceptionHandlerTest {
 
     @Mock
     private Tracer tracer;
+
+    @Mock
+    private Span span;
+
+    @Mock
+    private TraceContext traceContext;
 
     private GlobalExceptionHandler handler;
 
@@ -202,5 +210,32 @@ class GlobalExceptionHandlerTest {
 
         //then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+    En esta prueba unitaria se espera que se valide que el traceId se obtiene del span activo
+    cuando Tracer.currentSpan() no es null.
+
+    Características extras:
+    - Simula una NotFoundException con un span activo en el tracer.
+
+    Se espera que el método:
+    - Retorne un ErrorResponse con el traceId obtenido del span.
+    **/
+    @Test
+    void handleNotFound_WhenTracerHasActiveSpan_ShouldIncludeTraceId() {
+        //given
+        NotFoundException ex = new NotFoundException("error.product.not_found", 1L);
+        when(messageSource.getMessage(eq("error.product.not_found"), any(), any(Locale.class)))
+                .thenReturn("No encontrado");
+        when(tracer.currentSpan()).thenReturn(span);
+        when(span.context()).thenReturn(traceContext);
+        when(traceContext.traceId()).thenReturn("abc123");
+
+        //when
+        ResponseEntity<ErrorResponse> response = handler.handleNotFound(ex);
+
+        //then
+        assertThat(response.getBody().traceId()).isEqualTo("abc123");
     }
 }

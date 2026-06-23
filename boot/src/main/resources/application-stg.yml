@@ -1,8 +1,19 @@
 # Perfil de Staging (Pre-Producción)
 spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${STG_ISSUER_URI:http://localhost:8080/auth/realms/catalog}
   data:
     mongodb:
       uri: mongodb://localhost:27017/catalog_stg # Base de datos separada para QA
+
+openapi:
+  server:
+    url: ${STG_GATEWAY_URL:http://localhost:8080}
+  security:
+    enabled: true
 
 management:
   tracing:

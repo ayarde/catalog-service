@@ -1,4 +1,10 @@
 # Perfil de Desarrollo Local
+openapi:
+  server:
+    url: http://localhost:8081
+  security:
+    enabled: false
+
 management:
   tracing:
     sampling:

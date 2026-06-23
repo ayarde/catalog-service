@@ -1,10 +1,12 @@
 package com.ecommerce.catalog.infrastructure.adapter.in.web.mapper;
 
 import com.ecommerce.catalog.application.dto.CreateProductCommand;
+import com.ecommerce.catalog.domain.model.PagedResult;
 import com.ecommerce.catalog.domain.model.Product;
 import com.ecommerce.catalog.domain.model.ProductImage;
 import com.ecommerce.catalog.domain.model.ProductStatus;
 import com.ecommerce.catalog.domain.model.ProductVariant;
+import com.ecommerce.catalog.infrastructure.adapter.in.web.dto.PagedResponse;
 import com.ecommerce.catalog.infrastructure.adapter.in.web.dto.ProductCreateRequest;
 import com.ecommerce.catalog.infrastructure.adapter.in.web.dto.ProductResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -145,6 +147,34 @@ class ProductWebMapperTest {
     }
 
     /**
+    En esta prueba unitaria se espera que el mapeo de toCommand maneje correctamente
+    la ausencia de variantes, devolviendo una lista vacía en lugar de null.
+
+    Características extras:
+    - El ProductCreateRequest tiene variants = null.
+    - El ProductCreateRequest tiene images = null.
+
+    Se espera que el método:
+    - Retorne un CreateProductCommand con variantes vacías e imágenes vacías.
+    **/
+    @Test
+    void toCommand_WithNullVariantsAndImages_ReturnsEmptyCollections() {
+        //given
+        ProductCreateRequest request = new ProductCreateRequest(
+                "SKU-NULL", "No Variants", "Desc", BigDecimal.TEN, "USD",
+                List.of(), List.of(), null, null, null
+        );
+
+        //when
+        CreateProductCommand command = webMapper.toCommand(request);
+
+        //then
+        assertThat(command).isNotNull();
+        assertThat(command.variants()).isEmpty();
+        assertThat(command.images()).isEmpty();
+    }
+
+    /**
     En esta prueba unitaria se espera que el mapeo retorne null si el producto de dominio es null,
     garantizando una defensa ante entradas inválidas sin lanzar NullPointerException.
 
@@ -213,6 +243,141 @@ class ProductWebMapperTest {
 
         //then
         assertThat(responses).isEmpty();
+    }
+
+    /**
+    En esta prueba unitaria se espera que toResponse maneje correctamente variantes e imágenes nulas,
+    devolviendo colecciones vacías en la respuesta.
+
+    Características extras:
+    - Product de dominio con variants = null e images = null.
+    - Product de dominio con status = null.
+
+    Se espera que el método:
+    - Retorne un ProductResponse con variantes vacías e imágenes vacías.
+    - El campo status debe ser null.
+    **/
+    @Test
+    void toResponse_WithNullCollectionsAndStatus_ReturnsEmptyCollections() {
+        //given
+        Product product = Product.builder()
+                .id(1L)
+                .skuBase("SKU-NULL")
+                .name("No Collections")
+                .slug("no-collections")
+                .description("Desc")
+                .basePrice(BigDecimal.TEN)
+                .currency("USD")
+                .categories(List.of())
+                .tags(List.of())
+                .attributes(Map.of())
+                .status(null)
+                .variants(null)
+                .images(null)
+                .build();
+
+        //when
+        ProductResponse response = webMapper.toResponse(product);
+
+        //then
+        assertThat(response).isNotNull();
+        assertThat(response.status()).isNull();
+        assertThat(response.variants()).isEmpty();
+        assertThat(response.images()).isEmpty();
+    }
+
+    /**
+    En esta prueba unitaria se espera que toPagedResponse retorne null cuando el input es null.
+
+    Características extras:
+    - El PagedResult de entrada es null explícitamente.
+
+    Se espera que el método:
+    - No lance ninguna excepción.
+    - Retorne null.
+    **/
+    @Test
+    void toPagedResponse_WithNullInput_ReturnsNull() {
+        //when
+        PagedResponse<ProductResponse> result = webMapper.toPagedResponse(null);
+
+        //then
+        assertThat(result).isNull();
+    }
+
+    /**
+    En esta prueba unitaria se espera que toPagedResponse calcule correctamente
+    el flag "last" para la última página.
+
+    Características extras:
+    - PagedResult con page = 1 y totalPages = 2.
+
+    Se espera que el método:
+    - Retorne un PagedResponse con last = true.
+    **/
+    @Test
+    void toPagedResponse_WhenLastPage_ShouldSetLastTrue() {
+        //given
+        PagedResult<Product> pagedResult = new PagedResult<>(
+                List.of(), 1, 20, 0L, 2
+        );
+
+        //when
+        PagedResponse<ProductResponse> result = webMapper.toPagedResponse(pagedResult);
+
+        //then
+        assertThat(result).isNotNull();
+        assertThat(result.last()).isTrue();
+    }
+
+    /**
+    En esta prueba unitaria se espera que toPagedResponse maneje correctamente
+    el caso de totalPages = 0.
+
+    Características extras:
+    - PagedResult con totalPages = 0.
+
+    Se espera que el método:
+    - Retorne un PagedResponse con last = true.
+    **/
+    @Test
+    void toPagedResponse_WhenTotalPagesIsZero_ShouldSetLastTrue() {
+        //given
+        PagedResult<Product> pagedResult = new PagedResult<>(
+                List.of(), 0, 20, 0L, 0
+        );
+
+        //when
+        PagedResponse<ProductResponse> result = webMapper.toPagedResponse(pagedResult);
+
+        //then
+        assertThat(result).isNotNull();
+        assertThat(result.last()).isTrue();
+    }
+
+    /**
+    En esta prueba unitaria se espera que toPagedResponse devuelva una página intermedia
+    con last = false.
+
+    Características extras:
+    - PagedResult con page = 0 y totalPages = 3 (no es la última).
+
+    Se espera que el método:
+    - Retorne un PagedResponse con last = false.
+    **/
+    @Test
+    void toPagedResponse_WhenNotLastPage_ShouldSetLastFalse() {
+        //given
+        PagedResult<Product> pagedResult = new PagedResult<>(
+                List.of(), 0, 20, 60L, 3
+        );
+
+        //when
+        PagedResponse<ProductResponse> result = webMapper.toPagedResponse(pagedResult);
+
+        //then
+        assertThat(result).isNotNull();
+        assertThat(result.last()).isFalse();
     }
 
     //<editor-fold desc="Métodos auxiliares">

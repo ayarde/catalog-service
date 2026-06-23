@@ -77,6 +77,19 @@ subprojects {
         finalizedBy jacocoTestReport
     }
 
+    jacocoTestCoverageVerification {
+        dependsOn test
+        violationRules {
+            rule {
+                limit {
+                    minimum = 0.80
+                }
+            }
+        }
+    }
+
+    check.dependsOn jacocoTestCoverageVerification
+
 // JaCoCo report generation is now compatible with Java 25
 // No need to disable JaCoCo for Test tasks
 }
@@ -120,11 +133,132 @@ tasks.register('ciTest') {
     // Run the integration tests (only application defines them)
     dependsOn 'ciIntTest'
 }
+// ---------------------------------------------------------------------
+// Versioning tasks (semver)
+// ---------------------------------------------------------------------
 
-// Disable Jacoco coverage verification in all subprojects due to incompatibility
-subprojects {
-    tasks.withType(JacocoCoverageVerification).configureEach {
-        enabled = false
+def versionFile = file('gradle.properties')
+def versionPattern = /(?m)^version=(.*)$/
+
+ext.parseSemver = { String v ->
+    def matcher = v =~ /^(\d+)\.(\d+)\.(\d+)(-SNAPSHOT)?$/
+    if (!matcher) throw new GradleException("Formato de versión inválido: $v")
+    [major: matcher[0][1] as int, minor: matcher[0][2] as int,
+     patch: matcher[0][3] as int, snapshot: matcher[0][4] != null]
+}
+
+ext.writeVersion = { String newVersion ->
+    def replaced = versionFile.text.replaceAll(versionPattern, "version=$newVersion")
+    versionFile.text = replaced
+    logger.lifecycle("Versión actualizada: $newVersion")
+}
+
+tasks.register('printVersion') {
+    description = 'Muestra la versión actual del proyecto'
+    group = 'versioning'
+    doLast { println project.version }
+}
+
+tasks.register('bumpMajor') {
+    description = 'Incrementa major version (1.0.0 -> 2.0.0-SNAPSHOT)'
+    group = 'versioning'
+    doLast {
+        def v = parseSemver(project.version.toString())
+        writeVersion("${v.major + 1}.0.0-SNAPSHOT")
+    }
+}
+
+tasks.register('bumpMinor') {
+    description = 'Incrementa minor version (1.0.0 -> 1.1.0-SNAPSHOT)'
+    group = 'versioning'
+    doLast {
+        def v = parseSemver(project.version.toString())
+        writeVersion("${v.major}.${v.minor + 1}.0-SNAPSHOT")
+    }
+}
+
+tasks.register('bumpPatch') {
+    description = 'Incrementa patch version (1.0.0 -> 1.0.1-SNAPSHOT)'
+    group = 'versioning'
+    doLast {
+        def v = parseSemver(project.version.toString())
+        writeVersion("${v.major}.${v.minor}.${v.patch + 1}-SNAPSHOT")
+    }
+}
+
+tasks.register('release') {
+    description = 'Elimina -SNAPSHOT (1.0.0-SNAPSHOT -> 1.0.0)'
+    group = 'versioning'
+    doLast {
+        def v = parseSemver(project.version.toString())
+        writeVersion("${v.major}.${v.minor}.${v.patch}")
+    }
+}
+
+tasks.register('snapshot') {
+    description = 'Agrega -SNAPSHOT si no lo tiene (1.0.0 -> 1.0.0-SNAPSHOT)'
+    group = 'versioning'
+    doLast {
+        def current = project.version.toString()
+        if (!current.endsWith('-SNAPSHOT')) {
+            writeVersion("$current-SNAPSHOT")
+        }
+    }
+}
+
+// ---------------------------------------------------------------------
+// Documentation tasks
+// ---------------------------------------------------------------------
+
+tasks.register('updateReadme') {
+    description = 'Actualiza la seccion de versionado y Docker en README.md'
+    group = 'documentation'
+    doLast {
+        def readme = file('README.md')
+        def content = readme.text
+        def markerStart = '## Versionado'
+        def markerEnd = '<!-- end-versioning -->'
+        def section = '''## Versionado
+
+El proyecto usa [Semantic Versioning](https://semver.org) con soporte para snapshots.
+
+### Comandos disponibles
+
+| Comando | Descripcion |
+|---------|-------------|
+| `./gradlew printVersion` | Muestra la version actual del proyecto |
+| `./gradlew bumpMajor` | Incrementa major (1.0.0 -> 2.0.0-SNAPSHOT) |
+| `./gradlew bumpMinor` | Incrementa minor (1.0.0 -> 1.1.0-SNAPSHOT) |
+| `./gradlew bumpPatch` | Incrementa patch (1.0.0 -> 1.0.1-SNAPSHOT) |
+| `./gradlew release` | Quita -SNAPSHOT (1.0.0-SNAPSHOT -> 1.0.0) |
+| `./gradlew snapshot` | Agrega -SNAPSHOT si no lo tiene |
+| `./gradlew -Pversion=X.Y.Z bootJar` | Build con version custom |
+| `./gradlew :boot:dockerBuild` | Construye imagen Docker local |
+| `./gradlew bootJar` | Genera JAR ejecutable en build/libs/ |
+
+### Ejemplos de uso
+
+```bash
+# Version custom para testing
+./gradlew -Pversion=1.0.0-RC1 bootJar
+
+# Release completo
+./gradlew bumpPatch && ./gradlew release && ./gradlew bootJar
+
+# Imagen Docker
+./gradlew -Pversion=1.0.0 :boot:dockerBuild
+# -> docker image catalog-service:1.0.0
+```
+
+''' + markerEnd
+
+        if (content.contains(markerStart)) {
+            content = content.replaceAll(/(?s)$markerStart.*?$markerEnd/, section)
+        } else {
+            content += "\n\n$section\n"
+        }
+        readme.text = content
+        logger.lifecycle("README.md actualizado con seccion de versionado y Docker")
     }
 }
 

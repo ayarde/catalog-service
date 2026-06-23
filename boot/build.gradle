@@ -46,3 +46,16 @@ bootJar {
 jar {
     enabled = false
 }
+
+tasks.register('dockerBuild', Exec) {
+    description = 'Construye imagen Docker local del servicio'
+    group = 'docker'
+    dependsOn bootJar
+
+    workingDir = projectDir
+
+    commandLine 'docker', 'build', '-t',
+            "catalog-service:${project.version}",
+            '--build-arg', "JAR_FILE=${bootJar.archiveFileName.get()}",
+            '.'
+}

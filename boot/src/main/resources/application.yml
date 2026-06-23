@@ -63,6 +63,12 @@ management:
 logging:
   config: classpath:logback-spring.xml
 
+openapi:
+  server:
+    url: http://localhost:8081
+  security:
+    enabled: true
+
 # Configuración de Resiliencia (Resilience4j)
 resilience4j:
   circuitbreaker:

@@ -77,4 +77,40 @@ class ProductPersistenceMapperTest {
         assertThat(restored.images()).hasSize(1);
         assertThat(restored.domainEvents()).isEmpty();
     }
+
+    /**
+    En esta prueba unitaria se espera que el mapeo maneje correctamente un Product con status = null,
+    ejerciendo la rama de status nulo en ambos sentidos (toDocument y toDomain).
+
+    Características extras:
+    - Product de dominio con status = null.
+    - Documento MongoDB con status = null en el round-trip inverso.
+
+    Se espera que el método:
+    - El documento resultante tenga status = null.
+    - El producto restaurado tenga status = null.
+    **/
+    @Test
+    void toDocumentAndToDomain_WithNullStatus_ShouldHandleNull() {
+        //given
+        Product product = Product.builder()
+                .id(20L)
+                .skuBase("SKU-NULL")
+                .name("No Status")
+                .slug("no-status")
+                .description("")
+                .basePrice(new BigDecimal("5.00"))
+                .currency("USD")
+                .status(null)
+                .domainEvents(List.of())
+                .build();
+
+        //when
+        ProductDocument document = mapper.toDocument(product);
+        Product restored = mapper.toDomain(document);
+
+        //then
+        assertThat(document.getStatus()).isNull();
+        assertThat(restored.status()).isNull();
+    }
 }

@@ -1,4 +1,23 @@
 # Perfil de Producción
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${PROD_ISSUER_URI}
+
+openapi:
+  server:
+    url: ${PROD_GATEWAY_URL}
+  security:
+    enabled: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 management:
   tracing:
     sampling:

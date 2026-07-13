@@ -12,8 +12,8 @@ import java.util.Map;
  */
 @Schema(description = "Producto del catálogo")
 public record ProductResponse(
-    @Schema(description = "Identificador único del producto", example = "1001")
-    Long id,
+    @Schema(description = "Identificador único del producto", example = "851984603516457141")
+    String id,
     @Schema(description = "SKU base del producto", example = "SKU-IPHONE-15")
     String skuBase,
     @Schema(description = "Nombre comercial", example = "iPhone 15")
@@ -46,8 +46,8 @@ public record ProductResponse(
 ) {
     @Schema(description = "Variante de producto")
     public record VariantResponse(
-        @Schema(description = "ID de la variante", example = "2001")
-        Long variantId,
+        @Schema(description = "ID de la variante", example = "851984603517425804")
+        String variantId,
         @Schema(description = "SKU de la variante", example = "SKU-IPHONE-15-BLK-128")
         String sku,
         @Schema(description = "Nombre de la variante", example = "Negro / 128GB")

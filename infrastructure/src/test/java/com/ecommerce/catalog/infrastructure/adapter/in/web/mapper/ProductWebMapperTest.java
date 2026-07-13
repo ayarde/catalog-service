@@ -130,7 +130,7 @@ class ProductWebMapperTest {
 
         //then
         assertThat(response).isNotNull();
-        assertThat(response.id()).isEqualTo(12345L);
+        assertThat(response.id()).isEqualTo("12345");
         assertThat(response.skuBase()).isEqualTo("SKU-BASE");
         assertThat(response.name()).isEqualTo("Awesome Product");
         assertThat(response.slug()).isEqualTo("awesome-product");
@@ -139,7 +139,7 @@ class ProductWebMapperTest {
         assertThat(response.updatedAt()).isNotNull();
 
         assertThat(response.variants()).hasSize(1);
-        assertThat(response.variants().get(0).variantId()).isEqualTo(999L);
+        assertThat(response.variants().get(0).variantId()).isEqualTo("999");
         assertThat(response.variants().get(0).sku()).isEqualTo("VAR-SKU-1");
 
         assertThat(response.images()).hasSize(1);
@@ -220,8 +220,8 @@ class ProductWebMapperTest {
 
         //then
         assertThat(responses).hasSize(2);
-        assertThat(responses.get(0).id()).isEqualTo(12345L);
-        assertThat(responses.get(1).id()).isEqualTo(12345L);
+        assertThat(responses.get(0).id()).isEqualTo("12345");
+        assertThat(responses.get(1).id()).isEqualTo("12345");
     }
 
     /**

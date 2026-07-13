@@ -72,7 +72,7 @@ public class ProductWebMapper {
                 .collect(Collectors.toList());
 
         return new ProductResponse(
-                domain.id(),
+                String.valueOf(domain.id()),
                 domain.skuBase(),
                 domain.name(),
                 domain.slug(),
@@ -113,7 +113,7 @@ public class ProductWebMapper {
 
     private ProductResponse.VariantResponse toVariantResponse(ProductVariant domain) {
         return new ProductResponse.VariantResponse(
-                domain.variantId(),
+                String.valueOf(domain.variantId()),
                 domain.sku(),
                 domain.variantName(),
                 domain.price(),

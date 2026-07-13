@@ -1,7 +1,3 @@
-ext {
-    set('testcontainers.version', '1.21.4')
-}
-
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
 apply plugin: 'io.spring.dependency-management'
@@ -86,8 +82,9 @@ dependencies {
     // Testing — Integration Tests (Testcontainers)
     intTestImplementation 'org.springframework.boot:spring-boot-starter-test'
     intTestImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    intTestImplementation 'org.testcontainers:junit-jupiter'
-    intTestImplementation 'org.testcontainers:mongodb'
-    intTestImplementation 'org.testcontainers:rabbitmq'
+    intTestImplementation "org.testcontainers:junit-jupiter:${testcontainersVersion}"
+    intTestImplementation "org.testcontainers:mongodb:${testcontainersVersion}"
+    intTestImplementation "org.testcontainers:rabbitmq:${testcontainersVersion}"
+    intTestImplementation "org.testcontainers:testcontainers:${testcontainersVersion}"
     intTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

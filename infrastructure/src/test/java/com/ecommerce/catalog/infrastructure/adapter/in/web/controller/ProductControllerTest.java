@@ -78,7 +78,7 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(1L));
+                .andExpect(jsonPath("$.id").value("1"));
     }
 
     /**
@@ -142,7 +142,7 @@ class ProductControllerTest {
         //when / then
         mockMvc.perform(get("/api/v1/products?page=0&size=20"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].id").value("1"))
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(20))
                 .andExpect(jsonPath("$.totalElements").value(1L));
@@ -255,7 +255,7 @@ class ProductControllerTest {
         //when / then
         mockMvc.perform(get("/api/v1/products/variants/10/availability"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.variantId").value(10L));
+                .andExpect(jsonPath("$.variantId").value("10"));
     }
 
     /**
@@ -308,6 +308,72 @@ class ProductControllerTest {
 
         //then
         assertThat(response.getStatusCode().value()).isEqualTo(429);
+    }
+
+    /**
+    En esta prueba unitaria se espera que la búsqueda por slug retorne 404 cuando el slug no existe en el sistema.
+
+    Características extras:
+    - El caso de uso devuelve un Optional.empty() para el slug solicitado.
+
+    Se espera que el método:
+    - Retorne un estado HTTP 404 (Not Found).
+    **/
+    @Test
+    void getProductBySlug_WhenNotFound_ShouldReturn404() throws Exception {
+        //given
+        when(getProductBySlugUseCase.getBySlug("no-existe")).thenReturn(Optional.empty());
+
+        //when / then
+        mockMvc.perform(get("/api/v1/products/slug/no-existe"))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+    En esta prueba unitaria se espera que la verificación de disponibilidad retorne 404 cuando la variante no existe.
+
+    Características extras:
+    - El caso de uso devuelve Optional.empty() para el ID de variante solicitado.
+
+    Se espera que el método:
+    - Retorne un estado HTTP 404 (Not Found).
+    **/
+    @Test
+    void checkVariantAvailability_WhenNotFound_ShouldReturn404() throws Exception {
+        //given
+        when(checkVariantAvailabilityUseCase.checkAvailability(999L)).thenReturn(Optional.empty());
+
+        //when / then
+        mockMvc.perform(get("/api/v1/products/variants/999/availability"))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+    En esta prueba unitaria se espera que la verificación de disponibilidad retorne correctamente
+    que una variante con stock cero no está disponible.
+
+    Características extras:
+    - La variante existe pero su stock es 0.
+    - Se consulta el endpoint de disponibilidad.
+
+    Se espera que el método:
+    - Retorne un estado HTTP 200 (OK).
+    - available debe ser false.
+    - stockQuantity debe ser 0.
+    **/
+    @Test
+    void checkVariantAvailability_WhenZeroStock_ShouldReturnNotAvailable() throws Exception {
+        //given
+        when(checkVariantAvailabilityUseCase.checkAvailability(10L))
+                .thenReturn(Optional.of(new VariantAvailability(
+                        10L, 1L, "Product", "Variant", "V-SKU", false, 0, "ACTIVE"
+                )));
+
+        //when / then
+        mockMvc.perform(get("/api/v1/products/variants/10/availability"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.stockQuantity").value(0));
     }
 
     //<editor-fold desc="Métodos auxiliares">

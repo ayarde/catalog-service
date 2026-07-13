@@ -122,10 +122,11 @@ public class ProductController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Producto encontrado",
                     content = @Content(schema = @Schema(implementation = ProductResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado",
+                    content = @Content)
     })
     public ResponseEntity<ProductResponse> getProduct(
-            @Parameter(description = "ID del producto", example = "1001", required = true)
+            @Parameter(description = "ID del producto", example = "1", required = true)
             @PathVariable Long id) {
         log.info("REST Request to get Product : {}", id);
         return getProductUseCase.getById(id)
@@ -176,7 +177,7 @@ public class ProductController {
     })
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     public ResponseEntity<ProductResponse> activateProduct(
-            @Parameter(description = "ID del producto", example = "1001", required = true)
+            @Parameter(description = "ID del producto", example = "1", required = true)
             @PathVariable Long id) {
         log.info("REST Request to activate Product : {}", id);
         Product product = activateProductUseCase.activate(new ActivateProductCommand(id));
@@ -199,7 +200,7 @@ public class ProductController {
     })
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     public ResponseEntity<ProductResponse> updateProduct(
-            @Parameter(description = "ID del producto", example = "1001", required = true)
+            @Parameter(description = "ID del producto", example = "1", required = true)
             @PathVariable Long id,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "Datos actualizados del producto", required = true)
@@ -231,7 +232,7 @@ public class ProductController {
     })
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     public ResponseEntity<Void> deleteProduct(
-            @Parameter(description = "ID del producto", example = "1001", required = true)
+            @Parameter(description = "ID del producto", example = "1", required = true)
             @PathVariable Long id) {
         log.info("REST Request to delete Product : {}", id);
         deleteProductUseCase.delete(new DeleteProductCommand(id, "REST API Request"));
@@ -252,9 +253,9 @@ public class ProductController {
     })
     @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH)
     public ResponseEntity<ProductResponse> updateStock(
-            @Parameter(description = "ID del producto", example = "1001", required = true)
+            @Parameter(description = "ID del producto", example = "1", required = true)
             @PathVariable Long id,
-            @Parameter(description = "ID de la variante", example = "2001", required = true)
+            @Parameter(description = "ID de la variante", example = "2", required = true)
             @PathVariable Long variantId,
             @Parameter(description = "Nueva cantidad de stock", example = "50", required = true)
             @RequestParam Integer quantity) {
@@ -272,10 +273,11 @@ public class ProductController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Producto encontrado",
                     content = @Content(schema = @Schema(implementation = ProductResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Producto no encontrado")
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado",
+                    content = @Content)
     })
     public ResponseEntity<ProductResponse> getProductBySlug(
-            @Parameter(description = "Slug SEO del producto", example = "iphone-15", required = true)
+            @Parameter(description = "Slug SEO del producto", example = "mi-producto", required = true)
             @PathVariable String slug) {
         log.info("REST Request to get Product by Slug : {}", slug);
         return getProductBySlugUseCase.getBySlug(slug)
@@ -293,16 +295,17 @@ public class ProductController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Disponibilidad consultada",
                     content = @Content(schema = @Schema(implementation = VariantAvailabilityResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Variante no encontrada"),
+            @ApiResponse(responseCode = "404", description = "Variante no encontrada",
+                    content = @Content),
             @ApiResponse(responseCode = "429", description = "Límite de peticiones excedido")
     })
     public ResponseEntity<VariantAvailabilityResponse> checkVariantAvailability(
-            @Parameter(description = "ID de la variante", example = "2001", required = true)
+            @Parameter(description = "ID de la variante", example = "2", required = true)
             @PathVariable Long variantId) {
         log.info("REST Request to check availability for Variant: {}", variantId);
         return checkVariantAvailabilityUseCase.checkAvailability(variantId)
                 .map(a -> ResponseEntity.ok(new VariantAvailabilityResponse(
-                        a.variantId(), a.productId(), a.productName(),
+                        String.valueOf(a.variantId()), String.valueOf(a.productId()), a.productName(),
                         a.variantName(), a.sku(), a.available(),
                         a.stockQuantity(), a.productStatus())))
                 .orElse(ResponseEntity.notFound().build());

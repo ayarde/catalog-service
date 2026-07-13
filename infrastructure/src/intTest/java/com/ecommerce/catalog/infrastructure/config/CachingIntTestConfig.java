@@ -1,10 +1,17 @@
-package com.ecommerce.catalog.boot.config;
+package com.ecommerce.catalog.infrastructure.config;
 
+import com.ecommerce.catalog.application.service.ProductService;
+import com.ecommerce.catalog.domain.port.out.EventPublisher;
+import com.ecommerce.catalog.domain.port.out.ProductRepository;
+import com.ecommerce.catalog.domain.port.util.SlugGenerator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,41 +22,45 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import org.springframework.beans.factory.annotation.Value;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
-@EnableCaching
+import static org.mockito.Mockito.mock;
+
 @Configuration
-public class RedisCacheConfig {
+@EnableCaching
+@EnableAutoConfiguration(exclude = {
+        MongoAutoConfiguration.class,
+        MongoDataAutoConfiguration.class,
+        MongoRepositoriesAutoConfiguration.class,
+        RabbitAutoConfiguration.class
+})
+public class CachingIntTestConfig {
 
-    private static final byte[] PRODUCT_KEY_PATTERN = "product*".getBytes(StandardCharsets.UTF_8);
+    @Bean
+    public ProductRepository productRepository() {
+        return mock(ProductRepository.class);
+    }
 
-    @Value("${app.cache.clear-on-startup:true}")
-    private boolean clearOnStartup;
+    @Bean
+    public EventPublisher eventPublisher() {
+        return mock(EventPublisher.class);
+    }
 
-    @Resource
-    private RedisConnectionFactory redisConnectionFactory;
+    @Bean
+    public SlugGenerator slugGenerator() {
+        return mock(SlugGenerator.class);
+    }
 
-    @PostConstruct
-    void clearProductCachesOnStartup() {
-        if (!clearOnStartup) return;
-        try (var connection = redisConnectionFactory.getConnection()) {
-            var keys = connection.keys(PRODUCT_KEY_PATTERN);
-            if (!keys.isEmpty()) {
-                connection.del(keys.toArray(new byte[0][]));
-            }
-        }
+    @Bean
+    public ProductService productService(ProductRepository productRepository,
+                                         EventPublisher eventPublisher,
+                                         SlugGenerator slugGenerator) {
+        return new ProductService(productRepository, eventPublisher, slugGenerator);
     }
 
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory, ObjectMapper objectMapper) {
-        
-        // Creamos una copia del ObjectMapper para no afectar la serialización de la API (JSON)
         ObjectMapper cacheObjectMapper = objectMapper.copy();
-        
-        // Activamos Default Typing para que Jackson guarde la clase de los objetos en el JSON.
-        // Esto es vital para que Spring sepa a qué clase instanciar al sacar los datos de Redis (incluyendo Optional).
         cacheObjectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.EVERYTHING,
                 JsonTypeInfo.As.PROPERTY);
@@ -57,16 +68,11 @@ public class RedisCacheConfig {
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(cacheObjectMapper);
 
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-                // Tiempo de vida por defecto de los cachés: 5 minutos
                 .entryTtl(Duration.ofMinutes(5))
-                // Las llaves siempre son Strings (ej: "product::123")
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                // Los valores se guardan como JSON
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
-                // Nota: disableCachingNullValues() NO debe activarse cuando hay @Cacheable
-                // sobre métodos que retornan Optional. Spring Cache unwraplea Optional.empty()
-                // a null, y RedisCache lo rechazaría: IllegalArgumentException → HTTP 500.
-                // Spring Cache ya maneja Optionals vacíos como cache miss de forma nativa.
+                // Alineado con RedisCacheConfig de producción: disableCachingNullValues()
+                // está comentado para evitar 500 en Optionals vacíos.
                 // .disableCachingNullValues();
 
         return RedisCacheManager.builder(redisConnectionFactory)

@@ -22,3 +22,7 @@ management:
   tracing:
     sampling:
       probability: 0.1 # 10% de trazabilidad para ahorrar performance y almacenamiento
+
+app:
+  cache:
+    clear-on-startup: false

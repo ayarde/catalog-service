@@ -184,7 +184,6 @@ public class ProductService implements
 
         var updatedProduct = product.updateVariantStock(variantId, newQuantity);
 
-        // Si el estado cambió, logueamos un aviso (aquí iría el evento de RabbitMQ en el futuro)
         if (product.status() != updatedProduct.status()) {
             log.info("Product Status changed from {} to {} due to stock update", 
                     product.status(), updatedProduct.status());

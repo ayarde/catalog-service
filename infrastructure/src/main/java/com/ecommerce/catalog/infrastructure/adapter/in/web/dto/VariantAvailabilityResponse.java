@@ -7,10 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "Disponibilidad de stock de una variante")
 public record VariantAvailabilityResponse(
-        @Schema(description = "ID técnico de la variante", example = "2001")
-        Long variantId,
-        @Schema(description = "ID del producto padre", example = "1001")
-        Long productId,
+        @Schema(description = "ID técnico de la variante", example = "851984603517425804")
+        String variantId,
+        @Schema(description = "ID del producto padre", example = "851984603516457141")
+        String productId,
         @Schema(description = "Nombre del producto", example = "iPhone 15")
         String productName,
         @Schema(description = "Nombre de la variante", example = "Negro / 128GB")

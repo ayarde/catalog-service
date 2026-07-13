@@ -102,15 +102,11 @@ Una vez que el servidor Spring Boot esté corriendo, puedes explorar, leer y pro
 | `./gradlew build -DdoIntegrationTest=true` | Sí | Sí (`check` → `intTest`) | Sí |
 | `./gradlew clean build -DdoIntegrationTest=true` | Sí | Sí | Sí |
 | `./gradlew :infrastructure:build -DdoIntegrationTest=true` | Sí (módulo) | Sí (módulo) | Sí |
-| `./gradlew testAll` | Sí (domain, application, infrastructure) | No | No |
-| `./gradlew intTestAll -DdoIntegrationTest=true` | No | Sí | Sí |
 | `./gradlew :infrastructure:intTest -DdoIntegrationTest=true` | No | Sí | Sí |
 
 El flag **`-DdoIntegrationTest=true`** activa `intTest` en `check` y por tanto en `build`. Sin el flag, `intTest` aparece como `⏭ SKIPPED` y no levanta contenedores.
 
 ### Unit tests (sin Docker)
-
-`testAll` ejecuta las tareas **en serie** (1/3 → 2/3 → 3/3) con banner por módulo Gradle y progreso numerado por test (`[01] ▷` / `[01] ✓`).
 
 ```bash
 # Un módulo
@@ -119,7 +115,7 @@ El flag **`-DdoIntegrationTest=true`** activa `intTest` en `check` y por tanto e
 ./gradlew :infrastructure:test
 
 # Los tres módulos
-./gradlew testAll
+./gradlew :domain:test :application:test :infrastructure:test
 
 # Build completo (unit tests en cada módulo vía check)
 ./gradlew build

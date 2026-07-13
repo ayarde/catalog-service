@@ -298,6 +298,160 @@ public class ProductServiceTest {
     }
 
     /**
+    En esta prueba unitaria se espera que se recupere un producto existente por su ID.
+
+    Características extras:
+    - El producto existe en el repositorio.
+    - Se consulta con un ID válido.
+
+    Se espera que el método:
+    - Retorne un Optional presente con el producto.
+    - El ID del producto coincida con el solicitado.
+    **/
+    @Test
+    public void getById_WhenExistingId_ReturnsProduct() {
+        //given
+        when(repository.findById(1L)).thenReturn(Optional.of(testProduct));
+
+        //when
+        Optional<Product> result = productService.getById(1L);
+
+        //then
+        assertThat(result).isPresent();
+        assertThat(result.get().id()).isEqualTo(1L);
+        verify(repository).findById(1L);
+    }
+
+    /**
+    En esta prueba unitaria se espera que se retorne Optional.empty() al buscar un ID inexistente.
+
+    Características extras:
+    - El repositorio no encuentra un producto con el ID solicitado.
+
+    Se espera que el método:
+    - Retorne Optional.empty().
+    **/
+    @Test
+    public void getById_WhenNonExistentId_ReturnsEmptyOptional() {
+        //given
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        //when
+        Optional<Product> result = productService.getById(99L);
+
+        //then
+        assertThat(result).isEmpty();
+        verify(repository).findById(99L);
+    }
+
+    /**
+    En esta prueba unitaria se espera que se recupere un producto existente por su slug.
+
+    Características extras:
+    - El producto existe en el repositorio.
+    - Se consulta con un slug válido.
+
+    Se espera que el método:
+    - Retorne un Optional presente con el producto.
+    - El slug del producto coincida con el solicitado.
+    **/
+    @Test
+    public void getBySlug_WhenExistingSlug_ReturnsProduct() {
+        //given
+        when(repository.findBySlug("test-product-sku-base")).thenReturn(Optional.of(testProduct));
+
+        //when
+        Optional<Product> result = productService.getBySlug("test-product-sku-base");
+
+        //then
+        assertThat(result).isPresent();
+        assertThat(result.get().slug()).isEqualTo("test-product-sku-base");
+        verify(repository).findBySlug("test-product-sku-base");
+    }
+
+    /**
+    En esta prueba unitaria se espera que se retorne Optional.empty() al buscar un slug inexistente.
+
+    Características extras:
+    - El repositorio no encuentra un producto con el slug solicitado.
+
+    Se espera que el método:
+    - Retorne Optional.empty().
+    **/
+    @Test
+    public void getBySlug_WhenNonExistentSlug_ReturnsEmptyOptional() {
+        //given
+        when(repository.findBySlug("no-existe")).thenReturn(Optional.empty());
+
+        //when
+        Optional<Product> result = productService.getBySlug("no-existe");
+
+        //then
+        assertThat(result).isEmpty();
+        verify(repository).findBySlug("no-existe");
+    }
+
+    /**
+    En esta prueba unitaria se espera que se retorne Optional.empty() al consultar
+    la disponibilidad de una variante que no existe.
+
+    Características extras:
+    - El ID de variante no existe en el repositorio.
+
+    Se espera que el método:
+    - Retorne Optional.empty().
+    **/
+    @Test
+    public void checkAvailability_WhenVariantNotFound_ReturnsEmptyOptional() {
+        //given
+        when(repository.findByVariantId(999L)).thenReturn(Optional.empty());
+
+        //when
+        Optional<VariantAvailability> result = productService.checkAvailability(999L);
+
+        //then
+        assertThat(result).isEmpty();
+        verify(repository).findByVariantId(999L);
+    }
+
+    /**
+    En esta prueba unitaria se espera que se retorne disponible = false cuando
+    la variante consultada tiene stock cero.
+
+    Características extras:
+    - La variante existe pero su stock es 0.
+    - Se verifica el campo available y stockQuantity en la respuesta.
+
+    Se espera que el método:
+    - Retorne un Optional presente con la información.
+    - available debe ser false.
+    - stockQuantity debe ser 0.
+    **/
+    @Test
+    public void checkAvailability_WhenZeroStock_ReturnsNotAvailable() {
+        //given
+        Product zeroStockProduct = testProduct.toBuilder()
+                .variants(List.of(ProductVariant.builder()
+                        .variantId(101L)
+                        .sku("SKU-VAR-1")
+                        .variantName("Red")
+                        .price(BigDecimal.valueOf(100))
+                        .currency("USD")
+                        .stockQuantity(0)
+                        .build()))
+                .build();
+        when(repository.findByVariantId(101L)).thenReturn(Optional.of(zeroStockProduct));
+
+        //when
+        Optional<VariantAvailability> result = productService.checkAvailability(101L);
+
+        //then
+        assertThat(result).isPresent();
+        assertThat(result.get().available()).isFalse();
+        assertThat(result.get().stockQuantity()).isZero();
+    }
+
+    /**
     En esta prueba se valida el borrado lógico de un producto.
     
     Características extras:

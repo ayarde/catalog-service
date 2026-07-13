@@ -63,6 +63,10 @@ management:
 logging:
   config: classpath:logback-spring.xml
 
+app:
+  cache:
+    clear-on-startup: true
+
 openapi:
   server:
     url: http://localhost:8081

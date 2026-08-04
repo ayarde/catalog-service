@@ -5,6 +5,7 @@ import com.ecommerce.catalog.domain.port.out.EventPublisher;
 import com.ecommerce.catalog.domain.port.out.ProductRepository;
 import com.ecommerce.catalog.domain.port.util.SlugGenerator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -55,7 +56,7 @@ public class CachingIntTestConfig {
     public ProductService productService(ProductRepository productRepository,
                                          EventPublisher eventPublisher,
                                          SlugGenerator slugGenerator) {
-        return new ProductService(productRepository, eventPublisher, slugGenerator);
+        return new ProductService(productRepository, eventPublisher, slugGenerator, new SimpleMeterRegistry());
     }
 
     @Bean

@@ -4,6 +4,7 @@ import com.ecommerce.catalog.application.service.ProductService;
 import com.ecommerce.catalog.domain.port.out.EventPublisher;
 import com.ecommerce.catalog.domain.port.out.ProductRepository;
 import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -35,10 +36,10 @@ public class ProductApplicationIntTestConfig {
     }
 
     @Bean
-    public ProductService productService(ProductRepository productRepository, 
-                                       EventPublisher eventPublisher, 
+    public ProductService productService(ProductRepository productRepository,
+                                       EventPublisher eventPublisher,
                                        SlugGenerator slugGenerator) {
-        return new ProductService(productRepository, eventPublisher, slugGenerator);
+        return new ProductService(productRepository, eventPublisher, slugGenerator, new SimpleMeterRegistry());
     }
 
     @Bean

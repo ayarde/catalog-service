@@ -34,7 +34,7 @@ El **Catalog Service** es el repositorio central (fuente de verdad) de todos los
   - **Almacenamiento Primario:** MongoDB (NoSQL) orientado a documentos para modelar la entidad completa del Producto sin los costosos `JOINs` de bases de datos relacionales.
   - **Caché Distribuido:** Redis (Spring Cache). Lecturas cacheadas e invalidación reactiva inmediata tras actualizaciones de stock/precio.
   - **Bus de Eventos:** RabbitMQ (AMQP). Emisión de eventos de dominio (`ProductCreatedEvent`) para propagar cambios de estado a otros microservicios (ej. sincronizar un motor de búsqueda externo en el futuro).
-  - **Observabilidad:** Micrometer, Zipkin y Prometheus para trazabilidad de peticiones distribuidas.
+   - **Observabilidad:** Micrometer + Prometheus para métricas, Zipkin para trazabilidad distribuida. Todos los microservicios comparten un stack unificado via el proyecto [`ecommerce-observability`](https://github.com/.../ecommerce-observability). Métricas custom de negocio (creación, stock, eventos) exportadas a Prometheus via endpoint `/management/prometheus`.
 
 ## 5. Contratos de API REST
 

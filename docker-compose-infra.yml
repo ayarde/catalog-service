@@ -38,13 +38,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Trazabilidad Distribuida (Zipkin)
-  zipkin:
-    image: openzipkin/zipkin
-    container_name: ecommerce-zipkin
-    ports:
-      - "9411:9411"
-
 volumes:
   mongodb_data:
   redis_data:

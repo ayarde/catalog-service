@@ -14,6 +14,10 @@ import com.ecommerce.catalog.domain.port.out.EventPublisher;
 import com.ecommerce.catalog.domain.port.out.ProductRepository;
 import com.ecommerce.catalog.domain.port.util.SlugGenerator;
 import io.hypersistence.tsid.TSID;
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
@@ -23,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProductService implements
         CreateProductUseCase, UpdateProductUseCase,
@@ -37,17 +42,43 @@ public class ProductService implements
     private final EventPublisher eventPublisher;
     private final SlugGenerator slugGenerator;
 
-    public ProductService(ProductRepository repository, EventPublisher eventPublisher, SlugGenerator slugGenerator) {
+    private final Counter productsCreatedCounter;
+    private final Counter productsActivatedCounter;
+    private final Counter duplicateSkuCounter;
+    private final AtomicInteger lowStockGauge = new AtomicInteger(0);
+    private final AtomicInteger outOfStockGauge = new AtomicInteger(0);
+
+    public ProductService(ProductRepository repository, EventPublisher eventPublisher,
+                          SlugGenerator slugGenerator, MeterRegistry meterRegistry) {
         this.repository = repository;
         this.eventPublisher = eventPublisher;
         this.slugGenerator = slugGenerator;
+
+        this.productsCreatedCounter = Counter.builder("catalog_products_created_total")
+                .description("Total products created")
+                .register(meterRegistry);
+        this.productsActivatedCounter = Counter.builder("catalog_products_activated_total")
+                .description("Total products activated")
+                .register(meterRegistry);
+        this.duplicateSkuCounter = Counter.builder("catalog_validation_duplicate_sku_total")
+                .description("Duplicate SKU attempts")
+                .register(meterRegistry);
+
+        Gauge.builder("catalog_stock_low_stock", lowStockGauge, AtomicInteger::get)
+                .description("Products with stock below low stock threshold")
+                .register(meterRegistry);
+        Gauge.builder("catalog_stock_out_of_stock", outOfStockGauge, AtomicInteger::get)
+                .description("Products currently out of stock")
+                .register(meterRegistry);
     }
 
     @Override
     @Transactional
+    @Timed(value = "catalog_create", description = "Time spent creating a product", percentiles = {0.99})
     @CacheEvict(value = "products_list", allEntries = true)
     public Product create(CreateProductCommand command) {
         if (repository.existsBySku(command.skuBase())) {
+            duplicateSkuCounter.increment();
             throw new AlreadyExistsException("error.product.already_exists", command.skuBase());
         }
 
@@ -98,6 +129,7 @@ public class ProductService implements
 
         var savedProduct = repository.save(product);
         eventPublisher.publish(savedProduct.domainEvents());
+        productsCreatedCounter.increment();
         log.info("Product created successfully with ID: {} and SKU: {}", savedProduct.id(), savedProduct.skuBase());
         return savedProduct;
     }
@@ -139,6 +171,7 @@ public class ProductService implements
         log.info("Activating product ID: {}", command.id());
         var savedProduct = repository.save(product.activate());
         eventPublisher.publish(savedProduct.domainEvents());
+        productsActivatedCounter.increment();
         return savedProduct;
     }
 
@@ -171,6 +204,7 @@ public class ProductService implements
 
     @Override
     @Transactional
+    @Timed(value = "catalog_update_stock", description = "Time spent updating stock", percentiles = {0.99})
     @Caching(evict = {
             @CacheEvict(value = "product", key = "#p0"),
             @CacheEvict(value = "product_slug", key = "#result.slug()"),
@@ -185,9 +219,21 @@ public class ProductService implements
         var updatedProduct = product.updateVariantStock(variantId, newQuantity);
 
         if (product.status() != updatedProduct.status()) {
-            log.info("Product Status changed from {} to {} due to stock update", 
+            log.info("Product Status changed from {} to {} due to stock update",
                     product.status(), updatedProduct.status());
+            if (updatedProduct.status() == ProductStatus.OUT_OF_STOCK) {
+                outOfStockGauge.incrementAndGet();
+            } else if (updatedProduct.status() == ProductStatus.ACTIVE) {
+                outOfStockGauge.decrementAndGet();
+            }
         }
+
+        updatedProduct.findVariantById(variantId).ifPresent(variant -> {
+            if (variant.lowStockThreshold() != null && variant.stockQuantity() != null
+                    && variant.stockQuantity() <= variant.lowStockThreshold()) {
+                lowStockGauge.incrementAndGet();
+            }
+        });
 
         var savedProduct = repository.save(updatedProduct);
         eventPublisher.publish(savedProduct.domainEvents());

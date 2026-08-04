@@ -4,6 +4,7 @@ import com.ecommerce.catalog.application.service.ProductService;
 import com.ecommerce.catalog.domain.port.out.EventPublisher;
 import com.ecommerce.catalog.domain.port.out.ProductRepository;
 import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,7 +18,7 @@ public class ProductBeanConfig {
 
     @Bean
     public ProductService productService(ProductRepository repository, EventPublisher eventPublisher,
-                                         SlugGenerator slugGenerator) {
-        return new ProductService(repository, eventPublisher, slugGenerator);
+                                         SlugGenerator slugGenerator, MeterRegistry meterRegistry) {
+        return new ProductService(repository, eventPublisher, slugGenerator, meterRegistry);
     }
 }

@@ -29,6 +29,9 @@ dependencies {
     
     implementation "io.hypersistence:hypersistence-tsid:${tsidVersion}"
 
+    // Métricas — Micrometer
+    implementation 'io.micrometer:micrometer-core'
+
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

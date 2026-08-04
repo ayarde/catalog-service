@@ -9,11 +9,11 @@ import com.ecommerce.catalog.domain.model.ProductVariant;
 import com.ecommerce.catalog.domain.port.out.EventPublisher;
 import com.ecommerce.catalog.domain.port.out.ProductRepository;
 import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,13 +44,12 @@ public class ProductServiceTest {
     @Mock
     private SlugGenerator slugGenerator;
 
-    @InjectMocks
     private ProductService productService;
-
     private Product testProduct;
 
     @BeforeEach
     public void setUp() {
+        productService = new ProductService(repository, eventPublisher, slugGenerator, new SimpleMeterRegistry());
         testProduct = Product.builder()
                 .id(1L)
                 .skuBase("SKU-BASE")

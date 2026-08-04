@@ -1,9 +1,10 @@
 package com.ecommerce.catalog.infrastructure.adapter.out.messaging;
 
 import com.ecommerce.catalog.domain.event.ProductCreatedEvent;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -19,8 +20,12 @@ class RabbitEventPublisherTest {
     @Mock
     private RabbitTemplate rabbitTemplate;
 
-    @InjectMocks
     private RabbitEventPublisher publisher;
+
+    @BeforeEach
+    void setUp() {
+        publisher = new RabbitEventPublisher(rabbitTemplate, new SimpleMeterRegistry());
+    }
 
     /**
     En esta prueba unitaria se espera que se valide la publicación exitosa en el exchange de catálogo.

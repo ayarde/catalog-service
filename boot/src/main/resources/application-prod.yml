@@ -5,6 +5,8 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${PROD_ISSUER_URI}
+  zipkin:
+    base-url: ${ZIPKIN_BASE_URL} # Obligatorio en producción
 
 openapi:
   server:

@@ -12,7 +12,7 @@ Está desarrollado con **Arquitectura Hexagonal (Ports and Adapters)**, logrando
 ## 🚀 Tecnologías Destacadas
 - **Java Virtual Threads:** Soporte nativo de alta concurrencia (Proyecto Loom) habilitado por defecto.
 - **Caché Distribuido:** Uso de **Redis** y Spring Cache para devolver lecturas masivas en `<50ms` y proteger a la base de datos de sobrecargas. Invalidación reactiva instantánea.
-- **Resiliencia (Resilience4j):** Protección activa de endpoints mediante *Rate Limiters* y *Bulkheads* para mitigar picos anómalos o intentos DDoS.
+- **Resiliencia (Resilience4j):** Protección activa de endpoints mediante *Circuit Breakers*, *Rate Limiters* y *Bulkheads* para mitigar picos anómalos o intentos DDoS.
 - **Base de Datos NoSQL:** **MongoDB** es el almacenamiento transaccional para modelar documentos anidados (Agregados), evitando múltiples y pesados JOINs relacionales.
 
 ## 📁 Documentación de Diseño
@@ -22,8 +22,10 @@ Las decisiones de arquitectura y casos de uso detallados se encuentran en el Pro
 ## ⚙️ Cómo ejecutar en local
 
 ### 1. Iniciar Infraestructura Dockerizada
-El servicio requiere MongoDB, Redis, RabbitMQ y Zipkin corriendo en Docker.
+El servicio requiere MongoDB, Redis y RabbitMQ corriendo en Docker. Zipkin, Prometheus y Grafana están en un proyecto compartido ([ecommerce-observability](https://github.com/.../ecommerce-observability)).
+
 ```bash
+# Infraestructura del servicio (MongoDB, Redis, RabbitMQ)
 docker-compose -f docker-compose-infra.yml up -d
 ```
 
@@ -157,7 +159,71 @@ Los `intTest` muestran salida detallada: `ClassName STANDARD_OUT` con logs de Te
 **CI / troubleshooting:** si Testcontainers no detecta el daemon, verifica `DOCKER_HOST`. En macOS suele ser el socket de Docker Desktop.
 
 ---
+## 📊 Observabilidad y Métricas
+
+### Stack compartido (`ecommerce-observability`)
+
+Zipkin, Prometheus y Grafana corren en un proyecto Docker independiente para que todos los microservicios del ecosistema compartan el mismo stack:
+
+```bash
+git clone <repo>/ecommerce-observability.git
+cd ecommerce-observability
+docker compose up -d
+```
+
+| Servicio | URL | Propósito |
+|---|---|---|
+| **Zipkin** | `http://localhost:9411` | Trazabilidad distribuida |
+| **Prometheus** | `http://localhost:9090` | Almacenamiento de métricas |
+| **Grafana** | `http://localhost:3000` | Dashboards (admin/admin) |
+
+Catalog-service se conecta a Zipkin vía la variable `ZIPKIN_BASE_URL` (default `http://localhost:9411`).
+
+### Endpoint de métricas
+
+Spring Boot Actuator expone las métricas en formato Prometheus en:
+
+```
+GET http://localhost:8081/management/prometheus
+```
+
+### Métricas custom implementadas
+
+Además de las métricas automáticas de JVM, MongoDB, RabbitMQ y HTTP, el servicio expone métricas de negocio y resiliencia:
+
+| Métrica | Tipo | Descripción |
+|---|---|---|
+| `catalog_products_created_total` | Counter | Total de productos creados |
+| `catalog_products_activated_total` | Counter | Total de productos activados |
+| `catalog_validation_duplicate_sku_total` | Counter | Intentos de SKU duplicado |
+| `catalog_stock_low_stock` | Gauge | Productos con stock bajo el umbral |
+| `catalog_stock_out_of_stock` | Gauge | Productos agotados (OUT_OF_STOCK) |
+| `catalog_events_publish_failed_total` | Counter | Fallos al publicar eventos en RabbitMQ |
+| `catalog_create_seconds` | Timer (p99) | Tiempo de creación de producto |
+| `catalog_update_stock_seconds` | Timer (p99) | Tiempo de actualización de stock |
+| `resilience4j_circuitbreaker_state` | Gauge | Estado del Circuit Breaker |
+| `resilience4j_ratelimiter_available_permissions` | Gauge | Permisos disponibles del Rate Limiter |
+
+### Verificación rápida
+
+```bash
+# Endpoint de métricas
+curl -s http://localhost:8081/management/prometheus | rg 'catalog_|resilience4j'
+
+# Trazas en Zipkin
+curl -s http://localhost:9411/api/v2/services
+```
+
+---
 ## 📋 Changelog de cambios recientes
+
+### [2026-07-21] — Métricas custom, MetricsConfig y Zipkin movido a proyecto compartido
+- **Zipkin movido:** El contenedor Zipkin se eliminó de `docker-compose-infra.yml` y ahora forma parte del proyecto compartido `ecommerce-observability` (junto con Prometheus y Grafana).
+- **`ZIPKIN_BASE_URL`:** Añadida configuración vía variable de entorno en todos los perfiles. Default `localhost:9411` para desarrollo local.
+- **`MetricsConfig.java`:** Nueva clase de configuración que registra tags globales y exporta métricas de Resilience4j (Circuit Breaker, Rate Limiter) a Prometheus.
+- **Métricas de negocio:** `ProductService` expone contadores de creación/activación, SKUs duplicados, stock bajo/agotado, y timers con percentil 99 para creación y actualización de stock.
+- **Métricas de mensajería:** `RabbitEventPublisher` expone contador de eventos fallidos al publicar.
+- **Tests:** Nuevos `ProductServiceMetricsTest` y `RabbitEventPublisherMetricsTest` siguiendo `TESTING_RULES.md`.
 
 ### [2026-06-08] — DataSeeder, corrección de caché Redis y mejoras en logs
 - **DataSeeder:** Nuevo `DataSeeder` activo con perfil `dev` que inserta 3 productos realistas al iniciar la app.

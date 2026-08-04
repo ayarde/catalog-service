@@ -24,6 +24,10 @@ spring:
     virtual:
       enabled: true
 
+  # Zipkin compartido — configurar via ZIPKIN_BASE_URL en producción
+  zipkin:
+    base-url: ${ZIPKIN_BASE_URL:http://localhost:9411}
+
   profiles:
     active: dev
 

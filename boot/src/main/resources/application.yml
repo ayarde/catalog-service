@@ -70,6 +70,8 @@ logging:
 app:
   cache:
     clear-on-startup: true
+  security:
+    audience: catalog-service
 
 openapi:
   server:

@@ -23,7 +23,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Catalog Service API")
                         .description("API REST del catálogo de productos. "
-                                + "GET público; escritura requiere JWT con rol ADMIN.")
+                                + "GET público; escritura requiere JWT con rol ADMIN (realm_access.roles).")
                         .version("v1"))
                 .addServersItem(new Server()
                         .url(serverUrl)

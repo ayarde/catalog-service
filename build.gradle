@@ -129,7 +129,7 @@ tasks.register('ciTest') {
     }
 
     // Run unit tests of EVERY sub‑project
-    dependsOn subprojects*.tasks.matching { it.name == 'test' }
+    dependsOn subprojects.collect { sub -> sub.tasks.matching { it.name == 'test' } }.flatten()
     // Run the integration tests (only application defines them)
     dependsOn 'ciIntTest'
 }

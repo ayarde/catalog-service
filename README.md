@@ -46,7 +46,7 @@ El perfil `dev` se activa automáticamente, lo que ejecuta el `DataSeeder` al in
 
 ```bash
 # Staging local con OAuth2 (requiere Keycloak en Docker)
-STG_ISSUER_URI=http://localhost:8080/auth/realms/catalog \
+STG_ISSUER_URI=http://localhost:8080/realms/ecommerce \
   ./gradlew :boot:bootRun --args='--spring.profiles.active=stg'
 ```
 
@@ -60,8 +60,8 @@ java -jar boot/build/libs/catalog-service-*.jar --spring.profiles.active=prod
 | Perfil | Seguridad | Uso |
 |--------|-----------|-----|
 | `dev` (default) | Deshabilitada | Desarrollo standalone, sin gateway |
-| `stg` | OAuth2 + rol ADMIN | Detrás de gateway con Keycloak |
-| `prod` | OAuth2 + rol ADMIN | Producción, Swagger deshabilitado |
+| `stg` | OAuth2 + JWT (`ROLE_ADMIN` o `SCOPE_catalog:write`) | Detrás de gateway con Keycloak |
+| `prod` | OAuth2 + JWT (`ROLE_ADMIN` o `SCOPE_catalog:write`) | Producción, Swagger deshabilitado |
 
 #### Build completo
 ```bash
@@ -69,7 +69,9 @@ java -jar boot/build/libs/catalog-service-*.jar --spring.profiles.active=prod
 ./gradlew build jacocoTestReport
 ```
 
-> **Nota:** Actualmente los reportes de JaCoCo están desactivados debido a incompatibilidades con Java 25. Para habilitarlos, cambie la toolchain a Java 21 (o una versión compatible) y elimine la línea que desactiva `jacoco.enabled` en `build.gradle`.
+> **Nota:** Los reportes JaCoCo se generan correctamente con Java 25. JaCoCo solo
+> está deshabilitado en la tarea `intTest` (`infrastructure/build.gradle`) para
+> evitar problemas del agente JVM en los tests de integración.
 
 ### 4. Datos de prueba
 
@@ -85,12 +87,113 @@ Cada producto incluye variantes con stock diferenciado, imágenes, atributos té
 
 > El seeder solo se ejecuta si la base de datos está vacía (`findAll().totalElements() == 0`). Si ya hay productos, los salta sin duplicar.
 
+## 🔐 Autenticación y autorización
+
+> Documento completo: [`docs/authentication.md`](docs/authentication.md) (roles, usuarios, clientes de Keycloak, flujos por llamador y matriz endpoint × llamador).
+>
+> La definición del realm `ecommerce` se gestiona en el proyecto **`keycloak-local`**
+> (`realm/ecommerce-realm.json`, Keycloak en Docker); no vive en este repositorio.
+
+El servicio actúa como **OAuth2 Resource Server** con validación de **JWT** (stateless, RFC 7519). Spring Security valida firma, expiración, `iss` y `aud` contra el proveedor (Keycloak) descubriendo la configuración y las claves JWKS automáticamente a partir de `spring.security.oauth2.resourceserver.jwt.issuer-uri`. No se hacen llamadas de introspectión por request.
+
+### Mapeo de claims a authorities
+
+Un `JwtAuthenticationConverter` personalizado (`JwtAuthenticationConfig`) combina dos fuentes de authorities:
+
+| Claim | Authority resultante | Origen |
+|---|---|---|
+| `scope` / `scp` | `SCOPE_<valor>` (ej. `SCOPE_catalog:write`) | Converter por defecto de Spring Security |
+| `realm_access.roles` | `ROLE_<rol>` (ej. `ROLE_ADMIN`) | Roles del realm de Keycloak |
+
+Gracias a este mapeo, la regla de escritura funciona tanto con tokens de usuario
+(`ROLE_ADMIN`) como con tokens machine-to-machine (`SCOPE_catalog:write`). El
+servicio también valida que el claim `aud` contenga `catalog-service` (tolerando
+`String` o `List<String>`), para rechazar tokens emitidos para otra API. Los roles
+`CUSTOMER`, `SELLER` y `SUPPORT` solo cuentan como "token válido"; son para el
+storefront u otros microservicios.
+
+### Reglas de autorización por ruta
+
+| Ruta | Acceso |
+|---|---|
+| `GET /api/v1/products/**` | Público (catálogo de lectura) |
+| `POST/PUT/DELETE/PATCH /api/v1/products/**` | `ROLE_ADMIN` **o** `SCOPE_catalog:write` |
+| `/management/**` (actuator) | Público |
+| `/v3/api-docs/**`, `/swagger-ui/**` | Público (solo si está habilitado) |
+| Cualquier otra | Requiere token válido (`authenticated`) |
+
+### Obtención de tokens y endpoints permitidos
+
+**1. Token de usuario con rol** (backoffice / probar roles) — `grant_type=password` sobre el cliente confidencial `ecommerce-api`:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/realms/ecommerce/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password" -d "client_id=ecommerce-api" \
+  -d "client_secret=${ECOM_API_CLIENT_SECRET}" \
+  -d "username=admin" -d "password=admin123" | jq -r .access_token)
+```
+
+*(usuarios de prueba: `admin`, `customer1`, `seller1`, `support1`)*
+
+**2. Token machine-to-machine** (servicio/eventos) — `grant_type=client_credentials`:
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/realms/ecommerce/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" -d "client_id=ecommerce-api" \
+  -d "client_secret=${ECOM_API_CLIENT_SECRET}" | jq -r .access_token)
+```
+
+**3. Qué token usar según el endpoint:**
+
+| Endpoint | Método | Sin token | Usuario sin ADMIN | Usuario ADMIN | Máquina `catalog:read` | Máquina `catalog:write` |
+|---|---|---|---|---|---|---|
+| `/api/v1/products` | GET | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/api/v1/products/{id}` | GET | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/api/v1/products/slug/{slug}` | GET | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/api/v1/products/variants/{variantId}/availability` | GET | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/api/v1/products` | POST | ❌ 401 | ❌ 403 | ✅ | ❌ 403 | ✅ |
+| `/api/v1/products/{id}` | PUT | ❌ 401 | ❌ 403 | ✅ | ❌ 403 | ✅ |
+| `/api/v1/products/{id}/activate` | PUT | ❌ 401 | ❌ 403 | ✅ | ❌ 403 | ✅ |
+| `/api/v1/products/{id}` | DELETE | ❌ 401 | ❌ 403 | ✅ | ❌ 403 | ✅ |
+| `/api/v1/products/{id}/variants/{variantId}/stock` | PATCH | ❌ 401 | ❌ 403 | ✅ | ❌ 403 | ✅ |
+
+**Reglas:**
+- **Lectura (GET):** público, no requiere token.
+- **Escritura (POST/PUT/DELETE/PATCH):** requiere `ROLE_ADMIN` (usuario `admin`)
+  **o** `SCOPE_catalog:write` (service account de `ecommerce-api` con ese client
+  scope). Un token de `customer1`/`seller1`/`support1` o una máquina con solo
+  `catalog:read` da **403**.
+- **401** = falta el token o no es válido (incluye `aud` incorrecto); **403** = token válido pero sin permiso.
+
+**Ejemplo de uso:**
+```bash
+curl -X POST http://localhost:8081/api/v1/products \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" -d '{...}'
+```
+
+**Nota de buenas prácticas (entornos desplegados):** en local (perfiles `dev`/`stg`) los atajos son aceptables (p. ej. `grant_type=password`, client secret en el archivo de realm, redirects/origins abiertos). Si `stg` se despliega como entorno de QA, debe aplicar el mismo endurecimiento que `prod`: sin `grant_type=password` (usar authorization code + PKCE en el frontend), secret inyectado por variable de entorno, y redirects/origins restringidos.
+
+### Integración con Spring Cloud Gateway
+
+El diseño es **totalmente compatible** con un API Gateway (p. ej. Spring Cloud Gateway):
+
+- **Validación stateless:** al validar el JWT por sí mismo, el servicio no necesita estado de sesión ni contactar al auth server por cada request; funciona transparente detrás de cualquier gateway (defensa en profundidad).
+- **Token Relay:** el gateway reenvía el header `Authorization: Bearer` entrante. En Spring Cloud Gateway se activa con `TokenRelayGatewayFilterFactory` (`token-relay: true`), o simplemente pasando el header hacia el downstream.
+- **CORS:** el servicio no define CORS; se gestiona en el edge (gateway).
+- **Rutas:** el gateway debe **preservar el prefijo `/api/v1`** (evitar `StripPrefix`/rewrite sin ajustar las reglas de autorización del servicio).
+- **Issuer:** el servicio debe poder alcanzar el `issuer-uri` directamente (fetch de JWKS); no es necesario exponer Keycloak a través del gateway.
+
+> **Importante:** nunca desplegar con el perfil `dev` detrás de un gateway: en `dev` la seguridad está deshabilitada (`permitAll`).
+
 ## 📚 Documentación Interactiva de API (Swagger)
 Una vez que el servidor Spring Boot esté corriendo, puedes explorar, leer y probar todos los endpoints disponibles a través de **Swagger UI**:
 
 🌐 **[http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)**
 
-> El botón **Authorize** aparece solo en `stg` (security activo). En `dev` no se solicita token. En `prod` Swagger está deshabilitado.
+> El botón **Authorize** aparece solo en `stg` (security activo). En `dev` no se solicita token. En `prod` Swagger está deshabilitado. El botón **Try it out** ejecuta contra `openapi.server.url` (en `stg` local por defecto `http://localhost:8081`, el servicio). Keycloak vive en `8080`; no confundir con el servicio (`8081`).
 
 ---
 ## 🧪 Tests
@@ -149,7 +252,7 @@ Los `intTest` muestran salida detallada: `ClassName STANDARD_OUT` con logs de Te
 ./gradlew :infrastructure:cleanIntTest :infrastructure:intTest -DdoIntegrationTest=true
 
 # Application + infrastructure
-./gradlew intTestAll -DdoIntegrationTest=true
+./gradlew ciTest -DdoIntegrationTest=true
 ```
 
 > **Nota:** Las tareas `test` e `intTest` **siempre re-ejecutan** (no usan caché UP-TO-DATE).
@@ -217,6 +320,18 @@ curl -s http://localhost:9411/api/v2/services
 ---
 ## 📋 Changelog de cambios recientes
 
+### [2026-08-07] — Realm en keycloak-local, tests alineados a TESTING_RULES.md y fix CI
+- **Realm movido:** La definición del realm `ecommerce` vive ahora en el proyecto `keycloak-local` (`realm/ecommerce-realm.json`), alineado con el modelo del servicio (`aud` = `catalog-service`, scopes `catalog:read`/`catalog:write`, roles `ADMIN`/`CUSTOMER`/`SELLER`/`SUPPORT`).
+- **Tests alineados:** `SecurityConfigTest`, `SecurityAuthorizationTest`, `JwtAuthenticationConverterTest`, `ResourceServerJwtConfigTest` y `FilterConfigTest` reformateados según `TESTING_RULES.md` (naming `methodUnderTestingName_StateUnderTest`, Javadoc en español, estructura `//given//when//then`, helpers en `editor-fold`).
+- **Fix `ciTest`:** Corregido `build.gradle` (la dependencia sobre los tasks `test` de subproyectos usaba `*.matching`, que rompía `./gradlew tasks` y `ciTest`).
+- **Cobertura:** Verificado mínimo 80% en los tres módulos con tests (domain 92%, application 90%, infrastructure 93%).
+
+### [2026-08-04] — Mapeo de roles Keycloak y documentación de seguridad
+- **Corregido `hasRole("ADMIN")`:** El converter por defecto de Spring Security solo mapeaba `scope` → `SCOPE_*`, por lo que los endpoints de escritura devolvían `403` siempre. Nuevo `JwtAuthenticationConfig` combina `scope` (`SCOPE_*`) con `realm_access.roles` de Keycloak (`ROLE_<rol>`).
+- **Issuer Keycloak moderno:** `STG_ISSUER_URI` por defecto actualizado a `http://localhost:8080/realms/ecommerce` (Keycloak 18+, sin `/auth`).
+- **Tests:** Nuevos `JwtAuthenticationConverterTest` (unitario) y `SecurityAuthorizationTest` (200/401/403 con `JwtDecoder` mockeado); `SecurityConfigTest` valida el nuevo bean.
+- **Documentación:** Nueva sección "Autenticación y autorización" en el README y ADR en `docs/prd.md` sobre autenticación OAuth2/JWT e integración con Spring Cloud Gateway.
+
 ### [2026-07-21] — Métricas custom, MetricsConfig y Zipkin movido a proyecto compartido
 - **Zipkin movido:** El contenedor Zipkin se eliminó de `docker-compose-infra.yml` y ahora forma parte del proyecto compartido `ecommerce-observability` (junto con Prometheus y Grafana).
 - **`ZIPKIN_BASE_URL`:** Añadida configuración vía variable de entorno en todos los perfiles. Default `localhost:9411` para desarrollo local.
@@ -233,7 +348,7 @@ curl -s http://localhost:9411/api/v2/services
 - **Puerto Swagger corregido:** Documentación apunta a `8081` (era `8080`).
 
 ---
-*Este servicio está preparado para Integración Continua (CI), contando con centralización de variables en Gradle, Toolchains de Java 25 y Reportes de Cobertura JaCoCo (mínimo 80% en unit tests del módulo infrastructure).*
+*Este servicio está preparado para Integración Continua (CI), contando con centralización de variables en Gradle, Toolchains de Java 25 y Reportes de Cobertura JaCoCo (mínimo 80% en unit tests de todos los módulos, verificado en el último build: domain 92%, application 90%, infrastructure 93%).*
 
 
 ## Versionado

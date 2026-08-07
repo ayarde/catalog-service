@@ -4,14 +4,14 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${STG_ISSUER_URI:http://localhost:8080/auth/realms/catalog}
+          issuer-uri: ${STG_ISSUER_URI:http://localhost:8080/realms/ecommerce}
   data:
     mongodb:
       uri: mongodb://localhost:27017/catalog_stg # Base de datos separada para QA
 
 openapi:
   server:
-    url: ${STG_GATEWAY_URL:http://localhost:8080}
+    url: ${STG_GATEWAY_URL:http://localhost:8081}
   security:
     enabled: true
 

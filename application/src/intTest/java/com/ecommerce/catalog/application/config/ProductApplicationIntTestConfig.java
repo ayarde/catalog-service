@@ -1,9 +1,9 @@
 package com.ecommerce.catalog.application.config;
 
 import com.ecommerce.catalog.application.service.ProductService;
-import com.ecommerce.catalog.domain.port.out.EventPublisher;
-import com.ecommerce.catalog.domain.port.out.ProductRepository;
-import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import com.ecommerce.catalog.application.port.out.EventPublisher;
+import com.ecommerce.catalog.application.port.out.ProductRepository;
+import com.ecommerce.catalog.application.port.util.SlugGenerator;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;

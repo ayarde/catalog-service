@@ -1,4 +1,4 @@
-package com.ecommerce.catalog.domain.port.out;
+package com.ecommerce.catalog.application.port.out;
 
 import com.ecommerce.catalog.domain.model.PagedResult;
 import com.ecommerce.catalog.domain.model.Product;
@@ -14,4 +14,3 @@ public interface ProductRepository {
     boolean existsBySku(String sku);
     void deleteById(Long id); // Note: Usually implementation performs soft delete
 }
-

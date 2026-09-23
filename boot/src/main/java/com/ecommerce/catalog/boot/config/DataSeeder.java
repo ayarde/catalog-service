@@ -6,7 +6,7 @@ import com.ecommerce.catalog.application.dto.ImageRequest;
 import com.ecommerce.catalog.application.dto.VariantRequest;
 import com.ecommerce.catalog.application.port.in.ActivateProductUseCase;
 import com.ecommerce.catalog.application.port.in.CreateProductUseCase;
-import com.ecommerce.catalog.domain.port.out.ProductRepository;
+import com.ecommerce.catalog.application.port.out.ProductRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;

@@ -6,7 +6,7 @@ import com.ecommerce.catalog.application.port.in.GetProductUseCase;
 import com.ecommerce.catalog.application.port.in.ListProductsUseCase;
 import com.ecommerce.catalog.domain.model.Product;
 import com.ecommerce.catalog.domain.model.ProductStatus;
-import com.ecommerce.catalog.domain.port.out.ProductRepository;
+import com.ecommerce.catalog.application.port.out.ProductRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,4 +1,4 @@
-package com.ecommerce.catalog.domain.port.util;
+package com.ecommerce.catalog.application.port.util;
 
 /**
  * Puerto para la generación de Slugs amigables para SEO a partir de texto.

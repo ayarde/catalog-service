@@ -1,4 +1,4 @@
-package com.ecommerce.catalog.domain.port.out;
+package com.ecommerce.catalog.application.port.out;
 
 import com.ecommerce.catalog.domain.event.DomainEvent;
 import java.util.List;

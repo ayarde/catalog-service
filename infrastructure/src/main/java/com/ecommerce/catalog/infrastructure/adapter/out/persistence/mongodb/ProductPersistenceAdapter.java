@@ -2,7 +2,7 @@ package com.ecommerce.catalog.infrastructure.adapter.out.persistence.mongodb;
 
 import com.ecommerce.catalog.domain.model.PagedResult;
 import com.ecommerce.catalog.domain.model.Product;
-import com.ecommerce.catalog.domain.port.out.ProductRepository;
+import com.ecommerce.catalog.application.port.out.ProductRepository;
 import com.ecommerce.catalog.infrastructure.adapter.out.persistence.mongodb.document.ProductDocument;
 import com.ecommerce.catalog.infrastructure.adapter.out.persistence.mongodb.mapper.ProductPersistenceMapper;
 import com.ecommerce.catalog.infrastructure.adapter.out.persistence.mongodb.repository.SpringDataMongoProductRepository;

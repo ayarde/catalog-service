@@ -1,7 +1,7 @@
 package com.ecommerce.catalog.infrastructure.adapter.out.messaging;
 
 import com.ecommerce.catalog.domain.event.DomainEvent;
-import com.ecommerce.catalog.domain.port.out.EventPublisher;
+import com.ecommerce.catalog.application.port.out.EventPublisher;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;

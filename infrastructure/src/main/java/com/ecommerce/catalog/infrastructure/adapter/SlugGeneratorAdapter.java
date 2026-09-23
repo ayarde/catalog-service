@@ -1,6 +1,6 @@
 package com.ecommerce.catalog.infrastructure.adapter;
 
-import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import com.ecommerce.catalog.application.port.util.SlugGenerator;
 import org.springframework.stereotype.Component;
 
 import java.text.Normalizer;

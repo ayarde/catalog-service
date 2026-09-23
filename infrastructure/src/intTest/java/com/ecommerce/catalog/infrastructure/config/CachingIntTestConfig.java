@@ -1,9 +1,9 @@
 package com.ecommerce.catalog.infrastructure.config;
 
 import com.ecommerce.catalog.application.service.ProductService;
-import com.ecommerce.catalog.domain.port.out.EventPublisher;
-import com.ecommerce.catalog.domain.port.out.ProductRepository;
-import com.ecommerce.catalog.domain.port.util.SlugGenerator;
+import com.ecommerce.catalog.application.port.out.EventPublisher;
+import com.ecommerce.catalog.application.port.out.ProductRepository;
+import com.ecommerce.catalog.application.port.util.SlugGenerator;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
